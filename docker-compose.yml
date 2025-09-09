@@ -1,0 +1,55 @@
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: nlp-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASS:-rootpassword}
+      MYSQL_DATABASE: ${DB_NAME:-date_interpreter}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3307:3306"
+    networks:
+      - nlp-network
+
+  backend:
+    build: ./backend
+    container_name: nlp-backend
+    environment:
+      DB_HOST: mysql
+      DB_NAME: ${DB_NAME:-date_interpreter}
+      DB_USER: ${DB_USER:-root}
+      DB_PASS: ${DB_PASS:-rootpassword}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    volumes:
+      - ./backend:/var/www/html
+    ports:
+      - "8080:80"
+    depends_on:
+      - mysql
+    networks:
+      - nlp-network
+
+  frontend:
+    build: ./frontend
+    container_name: nlp-frontend
+    environment:
+      VITE_API_URL: http://localhost:8080/api
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    networks:
+      - nlp-network
+
+volumes:
+  mysql_data:
+
+networks:
+  nlp-network:
+    driver: bridge
+
+
